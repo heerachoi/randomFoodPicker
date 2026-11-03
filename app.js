@@ -10,6 +10,7 @@ let state = freshState();
 let spinTimer, toastTimer, rotation = 0, spinning = false, confirmAction;
 let storageAvailable = true;
 let manageCategory = null;
+let listCategory = null;
 
 function freshState() {
   return { version: 2, day: dayKey(), restaurants: clone(DEFAULT_RESTAURANTS), excluded: [] };
@@ -136,25 +137,30 @@ function renderWheel(candidates) {
   });
 }
 
-function renderManageList() {
-  const available = categories();
-  if (manageCategory !== null && !available.includes(manageCategory)) manageCategory = null;
-  const filters = $('#manage-filters');
+function renderCategoryFilters(filters, selectedCategory, listId, onChange) {
   filters.replaceChildren();
-  [null, ...available].forEach(category => {
+  [null, ...categories()].forEach(category => {
     const button = element('button', 'manage-filter');
     const label = category ?? '전체';
     const count = category === null ? state.restaurants.length : state.restaurants.filter(r => r.category === category).length;
-    button.setAttribute('aria-label', `${label} 음식점 보기`);
-    button.setAttribute('aria-pressed', String(category === manageCategory));
-    button.setAttribute('aria-controls', 'manage-list');
+    const accessibleLabel = `${label} ${listId === 'manage-list' ? '음식점' : '점심 리스트'} 보기`;
+    button.setAttribute('aria-label', accessibleLabel);
+    button.setAttribute('aria-pressed', String(category === selectedCategory));
+    button.setAttribute('aria-controls', listId);
     button.append(element('span', '', label), element('span', 'manage-filter-count', count));
     button.onclick = () => {
-      manageCategory = category;
-      renderManageList();
-      [...filters.querySelectorAll('button')].find(el => el.getAttribute('aria-label') === `${label} 음식점 보기`)?.focus({ preventScroll: true });
+      onChange(category);
+      [...filters.querySelectorAll('button')].find(el => el.getAttribute('aria-label') === accessibleLabel)?.focus({ preventScroll: true });
     };
     filters.append(button);
+  });
+}
+
+function renderManageList() {
+  if (manageCategory !== null && !categories().includes(manageCategory)) manageCategory = null;
+  renderCategoryFilters($('#manage-filters'), manageCategory, 'manage-list', category => {
+    manageCategory = category;
+    renderManageList();
   });
   const manage = $('#manage-list');
   manage.replaceChildren();
@@ -175,27 +181,32 @@ function renderManageList() {
   if (!state.restaurants.length) manage.append(element('div', 'empty-people', '아직 등록된 음식점이 없어요.'));
 }
 
-function renderRestaurants(candidates) {
-  const eligibleIds = new Set(candidates.map(r => r.id));
-  const grid = $('#restaurant-list');
-  grid.replaceChildren();
-  state.restaurants.forEach(restaurant => {
-    const eligible = eligibleIds.has(restaurant.id);
-    const card = element('article', `restaurant-card${eligible ? '' : ' excluded'}`);
-    card.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
-    const tile = element('span', 'food-tile', foodEmoji(restaurant.category));
-    tile.setAttribute('aria-hidden', 'true');
-    const meta = element('div', 'restaurant-meta');
-    meta.append(element('span', 'category-tag', restaurant.category), element('h3', '', restaurant.name), element('span', 'restaurant-status', eligible ? '오늘의 후보' : '오늘은 쉬어가요'));
-    card.append(tile, meta);
-    grid.append(card);
-
+function renderRestaurantList(candidates) {
+  if (listCategory !== null && !categories().includes(listCategory)) listCategory = null;
+  renderCategoryFilters($('#restaurant-filters'), listCategory, 'restaurant-list', category => {
+    listCategory = category;
+    renderRestaurantList(eligibleRestaurants(state.restaurants, state.excluded));
   });
-  if (!state.restaurants.length) {
-    grid.append(element('div', 'empty-restaurants', '점심 리스트가 비어 있어요. 첫 번째 맛집을 추가해 주세요!'));
-  }
+  const eligibleIds = new Set(candidates.map(r => r.id));
+  const list = $('#restaurant-list');
+  const visible = state.restaurants.filter(r => listCategory === null || r.category === listCategory);
+  list.replaceChildren();
+  visible.forEach(restaurant => {
+    const eligible = eligibleIds.has(restaurant.id);
+    const row = element('article', `restaurant-item${eligible ? '' : ' excluded'}`);
+    row.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
+    const status = element('span', 'restaurant-status-dot');
+    status.setAttribute('aria-hidden', 'true');
+    row.append(status, element('h3', '', restaurant.name), element('span', 'restaurant-category', restaurant.category));
+    list.append(row);
+  });
+  if (!state.restaurants.length) list.append(element('div', 'empty-restaurants', '점심 리스트가 비어 있어요. 첫 번째 맛집을 추가해 주세요!'));
+  $('#restaurant-count').textContent = listCategory === null ? state.restaurants.length : `${visible.length} / ${state.restaurants.length}`;
+}
+
+function renderRestaurants(candidates) {
+  renderRestaurantList(candidates);
   renderManageList();
-  $('#restaurant-count').textContent = state.restaurants.length;
   $('#category-options').replaceChildren(...categories().map(category => {
     const option = element('option'); option.value = category; return option;
   }));
