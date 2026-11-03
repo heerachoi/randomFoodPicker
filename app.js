@@ -1,5 +1,5 @@
 import { DEFAULT_RESTAURANTS } from './restaurants.js';
-import { dayKey, eligibleRestaurants, restoreState, encodeShare, decodeShare, randomIndex } from './lib.js';
+import { dayKey, eligibleRestaurants, restoreState, decodeShare, randomIndex } from './lib.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'lunchmate.v2';
@@ -50,7 +50,7 @@ function persist() {
     storageAvailable = true;
   } catch {
     storageAvailable = false;
-    toast('브라우저 저장 공간을 사용할 수 없어요. 닫기 전에 공유 링크를 보관해 주세요.');
+    toast('브라우저 저장 공간을 사용할 수 없어 이번 화면에서만 유지돼요.');
   }
   $('.storage-badge').lastChild.textContent = storageAvailable ? ' 이 브라우저에 저장 중' : ' 이번 화면에서만 유지 중';
 }
@@ -181,22 +181,12 @@ function render() {
   renderCategories();
   renderWheel(candidates);
   renderRestaurants(candidates);
-  const excluded = categories().filter(category => state.excluded.includes(category));
-  $('#excluded-label').textContent = excluded.length ? `${excluded.join(' · ')} 제외했어요` : '모든 카테고리가 열려 있어요';
-  $('#excluded-description').textContent = excluded.length ? `선택한 카테고리는 빼고, ${candidates.length}곳에서 골라요.` : '제외할 메뉴가 없다면 바로 돌려도 좋아요.';
   $('#picker-title').textContent = candidates.length ? '오늘의 맛있는 운명은?' : '잠깐, 먹을 곳이 없어요!';
   $('#candidate-count').textContent = candidates.length ? `${candidates.length}곳의 음식점이 기다리고 있어요` : state.restaurants.length ? '제외한 카테고리를 하나만 풀어볼까요?' : '우리 팀의 첫 번째 음식점을 추가해 주세요.';
   $('#spin').disabled = !candidates.length;
   $('#spin').replaceChildren(element('span', '', '↻'), document.createTextNode(candidates.length === 1 ? '남은 음식점으로 결정하기' : '점심 메뉴 돌리기'), element('span', '', '↗'));
-  $('#reset-preferences').disabled = !state.excluded.length;
   $('#picker-footnote').textContent = candidates.length ? '선택한 카테고리를 제외하고 공평하게 뽑아요.' : '아래 목록에서 후보를 확인하고 제외 선택을 조정해 주세요.';
 }
-
-$('#reset-preferences').onclick = () => {
-  state.excluded = [];
-  update();
-  toast('모든 카테고리를 다시 열었어요.');
-};
 
 $('#restaurant-form').onsubmit = event => {
   event.preventDefault();
@@ -249,26 +239,6 @@ document.querySelectorAll('dialog').forEach(dialog => {
   });
 });
 $('#confirm-action').onclick = () => { $('#confirm-dialog').close(); const action = confirmAction; confirmAction = undefined; action?.(); };
-
-$('#share').onclick = () => {
-  ensureToday();
-  const url = new URL(location.href);
-  url.hash = `lunch=${encodeShare(state)}`;
-  if (url.href.length > 60000) return toast('공유할 내용이 너무 많아요. 음식점 수를 줄여 주세요.');
-  $('#share-url').value = url.href;
-  $('#share-dialog').showModal();
-};
-$('#copy-share').onclick = async () => {
-  try {
-    await navigator.clipboard.writeText($('#share-url').value);
-    $('#share-dialog').close();
-    toast('공유 링크를 복사했어요. 동료에게 보내주세요!');
-  } catch {
-    $('#share-url').focus();
-    $('#share-url').select();
-    toast('링크를 선택했어요. 복사해서 전달해 주세요.');
-  }
-};
 
 function importShare() {
   if (!location.hash.startsWith('#lunch=')) return;
