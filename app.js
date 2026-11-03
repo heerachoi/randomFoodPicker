@@ -185,7 +185,6 @@ function render() {
   $('#candidate-count').textContent = candidates.length ? `${candidates.length}곳의 음식점이 기다리고 있어요` : state.restaurants.length ? '제외한 카테고리를 하나만 풀어볼까요?' : '우리 팀의 첫 번째 음식점을 추가해 주세요.';
   $('#spin').disabled = !candidates.length;
   $('#spin').replaceChildren(element('span', '', '↻'), document.createTextNode(candidates.length === 1 ? '남은 음식점으로 결정하기' : '점심 메뉴 돌리기'), element('span', '', '↗'));
-  $('#picker-footnote').textContent = candidates.length ? '선택한 카테고리를 제외하고 공평하게 뽑아요.' : '아래 목록에서 후보를 확인하고 제외 선택을 조정해 주세요.';
 }
 
 $('#restaurant-form').onsubmit = event => {
