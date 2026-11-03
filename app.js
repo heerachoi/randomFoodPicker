@@ -9,6 +9,7 @@ const id = () => crypto.randomUUID();
 let state = freshState();
 let spinTimer, toastTimer, rotation = 0, spinning = false, confirmAction;
 let storageAvailable = true;
+let manageCategory = null;
 
 function freshState() {
   return { version: 2, day: dayKey(), restaurants: clone(DEFAULT_RESTAURANTS), excluded: [] };
@@ -135,22 +136,29 @@ function renderWheel(candidates) {
   });
 }
 
-function renderRestaurants(candidates) {
-  const eligibleIds = new Set(candidates.map(r => r.id));
-  const grid = $('#restaurant-list');
+function renderManageList() {
+  const available = categories();
+  if (manageCategory !== null && !available.includes(manageCategory)) manageCategory = null;
+  const filters = $('#manage-filters');
+  filters.replaceChildren();
+  [null, ...available].forEach(category => {
+    const button = element('button', 'manage-filter');
+    const label = category ?? '전체';
+    const count = category === null ? state.restaurants.length : state.restaurants.filter(r => r.category === category).length;
+    button.setAttribute('aria-label', `${label} 음식점 보기`);
+    button.setAttribute('aria-pressed', String(category === manageCategory));
+    button.setAttribute('aria-controls', 'manage-list');
+    button.append(element('span', '', label), element('span', 'manage-filter-count', count));
+    button.onclick = () => {
+      manageCategory = category;
+      renderManageList();
+      [...filters.querySelectorAll('button')].find(el => el.getAttribute('aria-label') === `${label} 음식점 보기`)?.focus({ preventScroll: true });
+    };
+    filters.append(button);
+  });
   const manage = $('#manage-list');
-  grid.replaceChildren();
   manage.replaceChildren();
-  state.restaurants.forEach(restaurant => {
-    const eligible = eligibleIds.has(restaurant.id);
-    const card = element('article', `restaurant-card${eligible ? '' : ' excluded'}`);
-    card.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
-    const tile = element('span', 'food-tile', foodEmoji(restaurant.category));
-    tile.setAttribute('aria-hidden', 'true');
-    const meta = element('div', 'restaurant-meta');
-    meta.append(element('span', 'category-tag', restaurant.category), element('h3', '', restaurant.name), element('span', 'restaurant-status', eligible ? '오늘의 후보' : '오늘은 쉬어가요'));
-    card.append(tile, meta);
-    grid.append(card);
+  state.restaurants.filter(r => manageCategory === null || r.category === manageCategory).forEach(restaurant => {
     const row = element('div', 'manage-row');
     const rowMeta = element('div');
     rowMeta.append(element('strong', '', restaurant.name), element('small', '', restaurant.category));
@@ -164,10 +172,29 @@ function renderRestaurants(candidates) {
     row.append(element('span', 'food-tile', foodEmoji(restaurant.category)), rowMeta, remove);
     manage.append(row);
   });
+  if (!state.restaurants.length) manage.append(element('div', 'empty-people', '아직 등록된 음식점이 없어요.'));
+}
+
+function renderRestaurants(candidates) {
+  const eligibleIds = new Set(candidates.map(r => r.id));
+  const grid = $('#restaurant-list');
+  grid.replaceChildren();
+  state.restaurants.forEach(restaurant => {
+    const eligible = eligibleIds.has(restaurant.id);
+    const card = element('article', `restaurant-card${eligible ? '' : ' excluded'}`);
+    card.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
+    const tile = element('span', 'food-tile', foodEmoji(restaurant.category));
+    tile.setAttribute('aria-hidden', 'true');
+    const meta = element('div', 'restaurant-meta');
+    meta.append(element('span', 'category-tag', restaurant.category), element('h3', '', restaurant.name), element('span', 'restaurant-status', eligible ? '오늘의 후보' : '오늘은 쉬어가요'));
+    card.append(tile, meta);
+    grid.append(card);
+
+  });
   if (!state.restaurants.length) {
     grid.append(element('div', 'empty-restaurants', '점심 리스트가 비어 있어요. 첫 번째 맛집을 추가해 주세요!'));
-    manage.append(element('div', 'empty-people', '아직 등록된 음식점이 없어요.'));
   }
+  renderManageList();
   $('#restaurant-count').textContent = state.restaurants.length;
   $('#category-options').replaceChildren(...categories().map(category => {
     const option = element('option'); option.value = category; return option;
@@ -195,6 +222,7 @@ $('#restaurant-form').onsubmit = event => {
   if (state.restaurants.length >= 100) return toast('음식점은 최대 100곳까지 추가할 수 있어요.');
   if (state.restaurants.some(r => r.name === name)) return toast('이미 등록된 음식점 이름이에요.');
   state.restaurants.push({ id: id(), name, category });
+  manageCategory = category;
   $('#restaurant-form').reset();
   update();
   toast(`${name}, 점심 리스트에 추가했어요!`);
