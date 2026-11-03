@@ -29,6 +29,5 @@
 
 .restaurant-category{font-size:9px;white-space:nowrap;color:#8b927e;background:#f4f6ef;padding:4px 6px;border-radius:5px}
 
-.list-bottom 
 @media(max-width:1000px){.restaurant-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.restaurant-list{grid-template-columns:1fr;padding:2px 15px}.restaurant-item h3{font-size:13px}.restaurant-item{min-height:45px}.restaurant-heading>.text-button{font-size:10px}.restaurant-filters{gap:6px}.restaurant-filters .manage-filter{padding:7px 10px}.restaurant-category{font-size:10px}}
