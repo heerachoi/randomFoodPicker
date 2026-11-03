@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f6f2">
+  <meta name="description" content="우리 팀의 점심 고민을 가볍게. 먹고 싶지 않은 카테고리를 빼고, 모두가 좋아할 점심을 뽑아보세요.">
+  <title>점심메이트 — 오늘 점심, 같이 골라요</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="header shell">
+    <a class="brand" href="./" aria-label="점심메이트 홈"><span class="brand-mark">✳</span> 점심메이트<span class="brand-dot">.</span></a>
+    <nav aria-label="주 메뉴"><span class="header-caption">함께 고르면 더 맛있는 점심</span><button class="button button-outline button-small" id="settings-open"><span aria-hidden="true">⚙</span> 음식점 관리</button></nav>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div><div class="eyebrow"><span></span> A LITTLE LESS 고민, A LITTLE MORE 점심</div><h1>오늘 점심,<br>고민은 <span class="underline">여기까지.</span></h1><p>먹고 싶지 않은 건 빼고, 맛있는 선택만 남겨요.<br class="mobile-break"> 오늘도 우리 팀, 잘 먹겠습니다!</p></div>
+      <div class="intro-note"><span class="note-spark" aria-hidden="true">✷</span><span>매일 찾아오는 고민에<br>가장 가벼운 답!</span><svg viewBox="0 0 100 55" aria-hidden="true"><path d="M8 5c12 45 57 41 70 20M65 25l17-5-1 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+    </section>
+    <div class="today-bar"><div><span class="calendar-icon" aria-hidden="true">▦</span><time id="today"></time><span class="today-pill">TODAY’S LUNCH</span></div><span class="storage-badge"><span></span> 이 브라우저에 저장 중</span></div>
+
+    <section class="workspace" aria-label="오늘의 점심 선택">
+      <div class="preferences panel">
+        <div class="section-heading"><div><span class="step">01</span><h2>오늘은 이거 빼주세요</h2></div><span class="tiny-label">모두의 취향을 모아서</span></div>
+        <p class="section-description">팀원을 추가하고, 오늘 피하고 싶은 카테고리를 골라주세요.</p>
+        <form id="person-form" class="person-form"><label class="sr-only" for="person-name">팀원 이름</label><input id="person-name" name="name" placeholder="이름 또는 닉네임" maxlength="20" required autocomplete="off"><button class="button button-dark" type="submit"><span aria-hidden="true">＋</span> 팀원 추가</button></form>
+        <div id="participants" class="participants"></div>
+        <div class="exclusion-summary"><span class="summary-icon" aria-hidden="true">↳</span><div><strong id="excluded-label">모든 카테고리가 열려 있어요</strong><p id="excluded-description">제외할 메뉴가 없다면 바로 돌려도 좋아요.</p></div><button class="text-button" id="reset-preferences" title="모든 팀원의 오늘 제외 선택 초기화">초기화</button></div>
+        <div class="sharing-note"><span aria-hidden="true">↗</span><p>동료와 선택을 나누고 싶다면?<br><button class="text-button" id="share">현재 목록과 오늘 선택 공유하기 <span aria-hidden="true">→</span></button><small>링크를 만든 시점의 내용이 전달돼요. 자동 동기화는 되지 않아요.</small></p></div>
+      </div>
+
+      <div class="picker panel">
+        <div class="picker-top"><span class="step">02</span><span class="picker-eyebrow">LET LUNCH HAPPEN</span><span class="sparkle" aria-hidden="true">✧</span></div>
+        <h2 id="picker-title">오늘의 맛있는 운명은?</h2><p id="candidate-count">3곳의 음식점이 기다리고 있어요</p>
+        <div class="wheel-stage"><span class="wheel-decoration decoration-one" aria-hidden="true">✳</span><span class="wheel-decoration decoration-two" aria-hidden="true">✦</span><div class="wheel-pointer" aria-hidden="true"></div><div class="wheel" id="wheel" aria-hidden="true"></div><div class="wheel-hub" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M10 7v9m4-9v9m-8-9v9c0 5 8 5 8 0M10 20v10M25 7c-5 2-5 13 0 13h2V7h-2zm2 13v10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <button class="button spin-button" id="spin"><span aria-hidden="true">↻</span> 점심 메뉴 돌리기 <span aria-hidden="true">↗</span></button><p class="picker-footnote" id="picker-footnote">모두의 제외 카테고리를 반영해서 공평하게 뽑아요.</p>
+        <div id="result" class="result" role="status" aria-live="polite" hidden></div>
+      </div>
+    </section>
+
+    <section class="restaurants-section" aria-labelledby="restaurants-title"><div class="restaurant-heading"><div><span class="eyebrow">OUR LUNCH SPOTS</span><h2 id="restaurants-title">우리의 점심 리스트 <span id="restaurant-count">3</span></h2></div><div class="legend"><span></span> 오늘의 후보 <span class="legend-excluded"></span> 오늘은 쉬어가요</div></div><div class="restaurant-grid" id="restaurant-list"></div><div class="list-bottom"><p>익숙한 곳도, 새로운 곳도. 우리 팀의 맛집을 모아보세요.</p><button class="text-button" id="add-restaurant-open">음식점 추가 <span aria-hidden="true">＋</span></button></div></section>
+  </main>
+  <footer class="shell footer"><span class="brand footer-brand"><span class="brand-mark">✳</span> 점심메이트.</span><p>좋은 점심이 좋은 오후를 만드니까.</p><span>MADE FOR OUR TEAM ♡</span></footer>
+
+  <dialog id="settings-dialog" class="modal"><div class="modal-heading"><div><span class="eyebrow">OUR LUNCH SPOTS</span><h2>음식점 관리</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="음식점 관리 닫기">×</button></div><p class="modal-description">누구나 우리 팀의 맛집을 추가하고 정리할 수 있어요.<br>변경 내용은 이 브라우저에 저장돼요. 공유 링크로 전달해 주세요.</p><div id="manage-list" class="manage-list"></div><form id="restaurant-form" class="restaurant-form"><h3>새로운 맛집 추가</h3><label for="restaurant-name">음식점 이름</label><input id="restaurant-name" maxlength="40" placeholder="예: 맛있는 식당" required><label for="restaurant-category">음식 카테고리</label><input id="restaurant-category" list="category-options" maxlength="20" placeholder="예: 한식, 일식, 쌀국수" required><datalist id="category-options"></datalist><label for="restaurant-url">음식점 링크</label><input id="restaurant-url" type="url" maxlength="1000" placeholder="https://naver.me/..." required><button class="button button-orange" type="submit">＋ 음식점 추가하기</button></form><div class="modal-bottom"><span>기본 목록은 restaurants.js에서 관리할 수 있어요.</span><button class="text-button" id="export-list">목록 파일 다운로드 ↓</button></div></dialog>
+  <dialog id="confirm-dialog" class="modal confirm-modal"><div class="modal-heading"><h2 id="confirm-title">확인</h2><button class="icon-button" data-close="confirm-dialog" aria-label="닫기">×</button></div><p id="confirm-description"></p><div class="confirm-actions"><button class="button button-outline" data-close="confirm-dialog">취소</button><button class="button button-orange" id="confirm-action">확인</button></div></dialog>
+  <dialog id="share-dialog" class="modal share-modal"><div class="modal-heading"><h2>동료에게 공유하기</h2><button class="icon-button" data-close="share-dialog" aria-label="닫기">×</button></div><p>현재 음식점 목록과 오늘의 제외 선택이 담긴 링크예요.<br>이후 변경 사항은 새 링크로 다시 전달해 주세요.</p><label class="sr-only" for="share-url">공유 링크</label><textarea id="share-url" rows="4" readonly></textarea><button class="button button-orange" id="copy-share">공유 링크 복사</button></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
