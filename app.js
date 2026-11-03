@@ -1,5 +1,5 @@
 import { DEFAULT_RESTAURANTS } from './restaurants.js';
-import { dayKey, eligibleRestaurants, safeUrl, validateState, encodeShare, decodeShare, randomIndex } from './lib.js';
+import { dayKey, eligibleRestaurants, removeRestaurantLinks, validateState, encodeShare, decodeShare, randomIndex } from './lib.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'lunchmate.v1';
@@ -56,7 +56,7 @@ function restore(saved) {
     saved.day = dayKey();
     saved.participants = saved.participants.map(person => ({ ...person, excluded: [] }));
   }
-  return saved;
+  return removeRestaurantLinks(saved);
 }
 
 try {
@@ -180,16 +180,13 @@ function renderRestaurants(candidates) {
   manage.replaceChildren();
   state.restaurants.forEach(restaurant => {
     const eligible = eligibleIds.has(restaurant.id);
-    const card = element('a', `restaurant-card${eligible ? '' : ' excluded'}`);
-    card.href = safeUrl(restaurant.url);
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
-    card.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}, 음식점 링크 새 창으로 열기`);
+    const card = element('article', `restaurant-card${eligible ? '' : ' excluded'}`);
+    card.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
     const tile = element('span', 'food-tile', foodEmoji(restaurant.category));
     tile.setAttribute('aria-hidden', 'true');
     const meta = element('div', 'restaurant-meta');
     meta.append(element('span', 'category-tag', restaurant.category), element('h3', '', restaurant.name), element('span', 'restaurant-status', eligible ? '오늘의 후보' : '오늘은 쉬어가요'));
-    card.append(tile, meta, element('span', 'card-arrow', '↗'));
+    card.append(tile, meta);
     grid.append(card);
     const row = element('div', 'manage-row');
     const rowMeta = element('div');
@@ -257,11 +254,10 @@ $('#restaurant-form').onsubmit = event => {
   event.preventDefault();
   const name = $('#restaurant-name').value.trim();
   const category = $('#restaurant-category').value.trim();
-  const url = safeUrl($('#restaurant-url').value.trim());
-  if (!name || !category || !url) return toast('이름, 카테고리, 올바른 http(s) 링크를 입력해 주세요.');
+  if (!name || !category) return toast('음식점 이름과 카테고리를 입력해 주세요.');
   if (state.restaurants.length >= 100) return toast('음식점은 최대 100곳까지 추가할 수 있어요.');
   if (state.restaurants.some(r => r.name === name)) return toast('이미 등록된 음식점 이름이에요.');
-  state.restaurants.push({ id: id(), name, category, url });
+  state.restaurants.push({ id: id(), name, category });
   $('#restaurant-form').reset();
   update();
   toast(`${name}, 점심 리스트에 추가했어요!`);
@@ -288,11 +284,7 @@ $('#spin').onclick = () => {
   spinTimer = setTimeout(() => {
     spinning = false;
     const result = $('#result');
-    const link = element('a', '', '음식점 보러 가기 ↗');
-    link.href = safeUrl(selected.url);
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    result.replaceChildren(element('strong', '', `${foodEmoji(selected.category)} 오늘은 ${selected.name}!`), element('p', '', `${selected.category} 먹으러 가요. 맛있는 점심 되세요!`), link);
+    result.replaceChildren(element('strong', '', `${foodEmoji(selected.category)} 오늘은 ${selected.name}!`), element('p', '', `${selected.category} 먹으러 가요. 맛있는 점심 되세요!`));
     result.hidden = false;
     $('#spin').disabled = false;
     $('#spin').replaceChildren(element('span', '', '↻'), document.createTextNode('한 번 더 돌리기'), element('span', '', '↗'));

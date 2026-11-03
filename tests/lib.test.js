@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_RESTAURANTS } from '../restaurants.js';
-import { dayKey, eligibleRestaurants, safeUrl, validateState, encodeShare, decodeShare, randomIndex } from '../lib.js';
+import { dayKey, eligibleRestaurants, removeRestaurantLinks, validateState, encodeShare, decodeShare, randomIndex } from '../lib.js';
 
 const state = () => ({ version: 1, day: '2026-11-03', restaurants: structuredClone(DEFAULT_RESTAURANTS), participants: [{ id: 'a', name: '희라', excluded: ['중식'] }] });
 
 test('any participant vetoes a category for every restaurant in that category', () => {
-  const restaurants = [...DEFAULT_RESTAURANTS, { id: 'another', name: '또 다른 중식집', category: '중식', url: 'https://example.com' }];
+  const restaurants = [...DEFAULT_RESTAURANTS, { id: 'another', name: '또 다른 중식집', category: '중식' }];
   const people = [{ excluded: ['중식'] }, { excluded: ['쌀국수'] }];
   assert.deepEqual(eligibleRestaurants(restaurants, people).map(r => r.name), ['파파이스']);
   assert.equal(eligibleRestaurants(restaurants, []).length, 4);
@@ -26,10 +26,20 @@ test('Korean names and emoji survive URL-safe sharing', () => {
   assert.deepEqual(decodeShare(encoded), original);
 });
 
-test('shared data cannot inject script links or duplicate identities', () => {
-  const badLink = state(); badLink.restaurants[0].url = 'javascript:alert(1)';
-  assert.equal(validateState(badLink), false);
-  assert.throws(() => encodeShare(badLink));
+test('legacy saved lists and shared links retain restaurants but discard URLs', () => {
+  const legacy = state(); legacy.restaurants[0].url = 'https://example.com/old-restaurant';
+  assert.equal(validateState(legacy), true);
+  assert.deepEqual(removeRestaurantLinks(legacy), state());
+  assert.deepEqual(decodeShare(encodeShare(legacy)), state());
+  const bytes = new TextEncoder().encode(JSON.stringify(legacy));
+  const oldLink = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
+  assert.deepEqual(decodeShare(oldLink), state());
+});
+
+test('shared data rejects invalid restaurants and duplicate identities', () => {
+  const invalid = state(); invalid.restaurants[0].category = '';
+  assert.equal(validateState(invalid), false);
+  assert.throws(() => encodeShare(invalid));
   const duplicate = state(); duplicate.restaurants.push(duplicate.restaurants[0]);
   assert.equal(validateState(duplicate), false);
   const duplicatePerson = state(); duplicatePerson.participants.push(duplicatePerson.participants[0]);
@@ -38,9 +48,6 @@ test('shared data cannot inject script links or duplicate identities', () => {
   assert.equal(validateState(huge), false);
   assert.throws(() => decodeShare('bad link'));
   assert.throws(() => decodeShare('x'.repeat(100001)));
-  assert.equal(safeUrl('data:text/html,hello'), null);
-  assert.equal(safeUrl('https://user:password@example.com'), null);
-  assert.equal(safeUrl('https://naver.me/53lKMMIt'), 'https://naver.me/53lKMMIt');
 });
 
 test('empty lists remain valid for sharing and show no candidates', () => {

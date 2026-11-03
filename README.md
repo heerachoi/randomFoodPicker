@@ -8,7 +8,7 @@
 2. 각 팀원이 오늘 피하고 싶은 카테고리를 선택합니다. 주황색으로 표시되면 **제외** 상태입니다.
 3. 한 명이라도 제외한 카테고리는 모든 음식점 후보에서 빠집니다.
 4. **점심 메뉴 돌리기**를 누릅니다. 후보가 0곳이면 버튼이 비활성화되고, 1곳이면 남은 곳으로 결정합니다.
-5. 추첨 결과나 음식점 카드를 누르면 등록한 음식점 링크가 새 창에서 열립니다.
+5. 추첨 결과와 음식점 카드에서 음식점 이름과 카테고리를 확인합니다. 음식점 링크는 사용하지 않습니다.
 
 제외 선택은 **한국 시간 자정**에 초기화됩니다. 팀원 이름과 음식점 목록은 유지합니다. 추첨 중 목록이나 제외 선택을 바꾸면 진행 중인 추첨은 취소됩니다.
 
@@ -29,9 +29,9 @@
 
 ```js
 export const DEFAULT_RESTAURANTS = [
-  { id: 'ssepiri', name: '쎕이리', category: '쌀국수', url: 'https://naver.me/53lKMMIt' },
-  { id: 'popeyes', name: '파파이스', category: '햄버거', url: 'https://naver.me/FLyTDJYa' },
-  { id: 'seodamheon', name: '서담헌', category: '중식', url: 'https://naver.me/5iTOwwcj' },
+  { id: 'ssepiri', name: '쎕이리', category: '쌀국수' },
+  { id: 'popeyes', name: '파파이스', category: '햄버거' },
+  { id: 'seodamheon', name: '서담헌', category: '중식' },
 ];
 ```
 

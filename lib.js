@@ -7,18 +7,15 @@ export function eligibleRestaurants(restaurants, participants) {
   return restaurants.filter(restaurant => !excluded.has(restaurant.category));
 }
 
-export function safeUrl(value) {
-  try {
-    const url = new URL(value);
-    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
-  } catch { return null; }
-}
-
 export function validateRestaurant(value) {
   return value && typeof value.id === 'string' && value.id.length <= 100 &&
     typeof value.name === 'string' && value.name.trim().length > 0 && value.name.length <= 40 &&
-    typeof value.category === 'string' && value.category.trim().length > 0 && value.category.length <= 20 &&
-    typeof value.url === 'string' && value.url.length <= 1000 && Boolean(safeUrl(value.url));
+    typeof value.category === 'string' && value.category.trim().length > 0 && value.category.length <= 20;
+}
+
+// Keep old saved lists and shared links compatible, without retaining restaurant URLs.
+export function removeRestaurantLinks(state) {
+  return { ...state, restaurants: state.restaurants.map(({ id, name, category }) => ({ id, name, category })) };
 }
 
 export function validateState(value) {
@@ -35,7 +32,7 @@ export function validateState(value) {
 
 export function encodeShare(state) {
   if (!validateState(state)) throw new Error('공유할 내용을 확인해 주세요.');
-  const bytes = new TextEncoder().encode(JSON.stringify(state));
+  const bytes = new TextEncoder().encode(JSON.stringify(removeRestaurantLinks(state)));
   return btoa(Array.from(bytes, b => String.fromCharCode(b)).join('')).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 
@@ -45,7 +42,7 @@ export function decodeShare(encoded) {
   const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
   const state = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   if (!validateState(state)) throw new Error('올바른 공유 링크가 아닙니다.');
-  return state;
+  return removeRestaurantLinks(state);
 }
 
 // Rejection sampling keeps every candidate equally likely.
