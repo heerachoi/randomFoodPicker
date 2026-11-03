@@ -250,17 +250,6 @@ document.querySelectorAll('dialog').forEach(dialog => {
 });
 $('#confirm-action').onclick = () => { $('#confirm-dialog').close(); const action = confirmAction; confirmAction = undefined; action?.(); };
 
-$('#export-list').onclick = () => {
-  const source = `// 점심메이트 기본 음식점 목록\nexport const DEFAULT_RESTAURANTS = ${JSON.stringify(state.restaurants, null, 2)};\n`;
-  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript;charset=utf-8' }));
-  const link = element('a');
-  link.href = url;
-  link.download = 'restaurants.js';
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast('파일을 GitHub의 restaurants.js와 교체하면 기본 목록에 반영돼요.');
-};
-
 $('#share').onclick = () => {
   ensureToday();
   const url = new URL(location.href);
