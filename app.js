@@ -1,8 +1,8 @@
 import { DEFAULT_RESTAURANTS } from './restaurants.js';
-import { dayKey, eligibleRestaurants, removeRestaurantLinks, validateState, encodeShare, decodeShare, randomIndex } from './lib.js';
+import { dayKey, eligibleRestaurants, restoreState, encodeShare, decodeShare, randomIndex } from './lib.js';
 
 const $ = selector => document.querySelector(selector);
-const STORAGE_KEY = 'lunchmate.v1';
+const STORAGE_KEY = 'lunchmate.v2';
 const COLORS = ['#f4dc9f', '#f4b597', '#d2dfc3', '#e8c8ac', '#d1e3de', '#efd1b7'];
 const clone = value => JSON.parse(JSON.stringify(value));
 const id = () => crypto.randomUUID();
@@ -11,11 +11,11 @@ let spinTimer, toastTimer, rotation = 0, spinning = false, confirmAction;
 let storageAvailable = true;
 
 function freshState() {
-  return { version: 1, day: dayKey(), restaurants: clone(DEFAULT_RESTAURANTS), participants: [{ id: id(), name: '나', excluded: [] }] };
+  return { version: 2, day: dayKey(), restaurants: clone(DEFAULT_RESTAURANTS), excluded: [] };
 }
 
 function foodEmoji(category) {
-  const match = [['쌀국수|국수|면|우동|라멘', '🍜'], ['햄버거|버거', '🍔'], ['중식|마라|짜장', '🥟'], ['한식|백반|찌개|국밥', '🍚'], ['일식|초밥|돈가스|돈까스', '🍣'], ['양식|파스타', '🍝'], ['피자', '🍕'], ['치킨|닭', '🍗'], ['분식|떡볶이', '🍢'], ['샐러드', '🥗'], ['고기|삼겹|구이', '🥩']].find(([pattern]) => new RegExp(pattern).test(category));
+  const match = [['쌀국수|국수|면|우동|라멘', '🍜'], ['햄버거|버거', '🍔'], ['중식|마라|짜장', '🥟'], ['순대국|국밥', '🍲'], ['한식|백반|찌개', '🍚'], ['돈까츠|돈가스|돈까스', '🍱'], ['일식|초밥', '🍣'], ['양식|파스타', '🍝'], ['피자', '🍕'], ['치킨|닭', '🍗'], ['분식|떡볶이', '🍢'], ['건강식|샐러드', '🥗'], ['샌드위치', '🥪'], ['고기|삼겹|구이', '🥩']].find(([pattern]) => new RegExp(pattern).test(category));
   return match?.[1] || '🍽️';
 }
 
@@ -34,33 +34,11 @@ function toast(message) {
 }
 
 function restore(saved) {
-  if (!validateState(saved)) throw new Error('저장한 내용을 읽을 수 없습니다.');
-  // Apply new source defaults without losing local additions and removals.
-  if (Array.isArray(saved.baseline) && saved.baseline.every(r => r && typeof r.id === 'string')) {
-    const baseline = new Map(saved.baseline.map(r => [r.id, r]));
-    const current = new Map(saved.restaurants.map(r => [r.id, r]));
-    const defaults = new Map(DEFAULT_RESTAURANTS.map(r => [r.id, r]));
-    const merged = [];
-    for (const restaurant of saved.restaurants) {
-      const old = baseline.get(restaurant.id);
-      if (!old || JSON.stringify(old) !== JSON.stringify(restaurant)) merged.push(restaurant);
-      else if (defaults.has(restaurant.id)) merged.push(clone(defaults.get(restaurant.id)));
-    }
-    for (const restaurant of DEFAULT_RESTAURANTS) {
-      if (!baseline.has(restaurant.id) && !current.has(restaurant.id)) merged.push(clone(restaurant));
-    }
-    if (merged.length <= 100) saved.restaurants = merged;
-  }
-  delete saved.baseline;
-  if (saved.day !== dayKey()) {
-    saved.day = dayKey();
-    saved.participants = saved.participants.map(person => ({ ...person, excluded: [] }));
-  }
-  return removeRestaurantLinks(saved);
+  return restoreState(saved, DEFAULT_RESTAURANTS);
 }
 
 try {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('lunchmate.v1');
   if (saved) state = restore(JSON.parse(saved));
 } catch {
   toast('저장된 내용을 읽지 못해 기본 목록으로 열었어요.');
@@ -95,7 +73,7 @@ function update() {
 function ensureToday() {
   if (state.day === dayKey()) return;
   state.day = dayKey();
-  state.participants.forEach(person => { person.excluded = []; });
+  state.excluded = [];
   update();
   toast('새로운 날이에요! 오늘의 제외 선택을 초기화했어요.');
 }
@@ -110,42 +88,27 @@ function confirm(title, description, action, label = '확인') {
 
 function categories() { return [...new Set(state.restaurants.map(r => r.category))]; }
 
-function renderPeople() {
-  const container = $('#participants');
+function renderCategories() {
+  const container = $('#category-choices');
   container.replaceChildren();
-  if (!state.participants.length) {
-    container.append(element('div', 'empty-people', '함께 먹을 팀원을 추가해 주세요.\n제외할 메뉴가 없다면 바로 돌려도 좋아요!'));
-  }
-  state.participants.forEach((person, index) => {
-    const article = element('article', 'participant');
-    const heading = element('div', 'participant-heading');
-    heading.append(element('span', 'avatar', person.name.slice(0, 1)), element('span', 'participant-name', person.name), element('span', 'participant-label', '오늘의 취향'));
-    const remove = element('button', 'icon-button', '×');
-    remove.setAttribute('aria-label', `${person.name} 팀원 삭제`);
-    remove.onclick = () => { state.participants = state.participants.filter(p => p.id !== person.id); update(); };
-    heading.append(remove);
-    const chips = element('div', 'category-chips');
-    chips.setAttribute('role', 'group');
-    chips.setAttribute('aria-label', `${person.name}의 제외 카테고리`);
-    categories().forEach(category => {
-      const selected = person.excluded.includes(category);
-      const button = element('button', 'category-chip');
-      button.setAttribute('aria-pressed', String(selected));
-      button.setAttribute('aria-label', `${person.name}: ${category} 제외`);
-      button.append(element('span', 'chip-indicator', selected ? '✓' : ''), element('span', '', category));
-      button.onclick = () => {
-        ensureToday();
-        person.excluded = selected ? person.excluded.filter(c => c !== category) : [...person.excluded, category];
-        update();
-        const next = [...$('#participants').querySelectorAll('.participant')][index]?.querySelector(`[aria-label="${CSS.escape(`${person.name}: ${category} 제외`)}"]`);
-        next?.focus({ preventScroll: true });
-      };
-      chips.append(button);
-    });
-    if (!categories().length) chips.append(element('span', 'participant-label', '음식점을 추가하면 카테고리가 표시돼요.'));
-    article.append(heading, chips);
-    container.append(article);
+  categories().forEach(category => {
+    const selected = state.excluded.includes(category);
+    const count = state.restaurants.filter(r => r.category === category).length;
+    const button = element('button', 'category-chip');
+    button.setAttribute('aria-pressed', String(selected));
+    button.setAttribute('aria-label', `${category} 제외`);
+    const emoji = element('span', 'category-emoji', foodEmoji(category));
+    emoji.setAttribute('aria-hidden', 'true');
+    button.append(emoji, element('span', 'category-name', category), element('span', 'category-count', `${count}곳`), element('span', 'chip-indicator', selected ? '✓' : ''));
+    button.onclick = () => {
+      ensureToday();
+      state.excluded = state.excluded.includes(category) ? state.excluded.filter(c => c !== category) : [...state.excluded, category];
+      update();
+      [...container.querySelectorAll('button')].find(el => el.getAttribute('aria-label') === `${category} 제외`)?.focus({ preventScroll: true });
+    };
+    container.append(button);
   });
+  if (!categories().length) container.append(element('p', 'empty-people', '음식점을 추가하면 카테고리가 표시돼요.'));
 }
 
 function renderWheel(candidates) {
@@ -212,43 +175,28 @@ function renderRestaurants(candidates) {
 }
 
 function render() {
-  const candidates = eligibleRestaurants(state.restaurants, state.participants);
+  const candidates = eligibleRestaurants(state.restaurants, state.excluded);
   $('#today').textContent = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
   $('#today').dateTime = state.day;
-  renderPeople();
+  renderCategories();
   renderWheel(candidates);
   renderRestaurants(candidates);
-  const excluded = categories().filter(category => state.participants.some(p => p.excluded.includes(category)));
+  const excluded = categories().filter(category => state.excluded.includes(category));
   $('#excluded-label').textContent = excluded.length ? `${excluded.join(' · ')} 제외했어요` : '모든 카테고리가 열려 있어요';
-  $('#excluded-description').textContent = excluded.length ? `한 명이라도 선택한 카테고리는 빼고, ${candidates.length}곳에서 골라요.` : '제외할 메뉴가 없다면 바로 돌려도 좋아요.';
+  $('#excluded-description').textContent = excluded.length ? `선택한 카테고리는 빼고, ${candidates.length}곳에서 골라요.` : '제외할 메뉴가 없다면 바로 돌려도 좋아요.';
   $('#picker-title').textContent = candidates.length ? '오늘의 맛있는 운명은?' : '잠깐, 먹을 곳이 없어요!';
   $('#candidate-count').textContent = candidates.length ? `${candidates.length}곳의 음식점이 기다리고 있어요` : state.restaurants.length ? '제외한 카테고리를 하나만 풀어볼까요?' : '우리 팀의 첫 번째 음식점을 추가해 주세요.';
   $('#spin').disabled = !candidates.length;
   $('#spin').replaceChildren(element('span', '', '↻'), document.createTextNode(candidates.length === 1 ? '남은 음식점으로 결정하기' : '점심 메뉴 돌리기'), element('span', '', '↗'));
-  $('#reset-preferences').disabled = !state.participants.some(p => p.excluded.length);
-  $('#picker-footnote').textContent = candidates.length ? '모두의 제외 카테고리를 반영해서 공평하게 뽑아요.' : '아래 목록에서 후보를 확인하고 제외 선택을 조정해 주세요.';
+  $('#reset-preferences').disabled = !state.excluded.length;
+  $('#picker-footnote').textContent = candidates.length ? '선택한 카테고리를 제외하고 공평하게 뽑아요.' : '아래 목록에서 후보를 확인하고 제외 선택을 조정해 주세요.';
 }
 
-$('#person-form').onsubmit = event => {
-  event.preventDefault();
-  ensureToday();
-  const input = $('#person-name');
-  const name = input.value.trim();
-  if (!name) { input.setCustomValidity('이름을 입력해 주세요.'); input.reportValidity(); return; }
-  if (state.participants.length >= 50) return toast('팀원은 최대 50명까지 추가할 수 있어요.');
-  if (state.participants.some(p => p.name === name)) return toast('이미 등록한 이름이에요. 다른 닉네임을 사용해 주세요.');
-  state.participants.push({ id: id(), name, excluded: [] });
-  input.value = '';
-  update();
-  input.focus();
-};
-$('#person-name').oninput = event => event.target.setCustomValidity('');
-
-$('#reset-preferences').onclick = () => confirm('오늘의 제외 선택을 비울까요?', '팀원 이름은 유지하고 모든 팀원의 제외 카테고리를 초기화해요.', () => {
-  state.participants.forEach(p => { p.excluded = []; });
+$('#reset-preferences').onclick = () => {
+  state.excluded = [];
   update();
   toast('모든 카테고리를 다시 열었어요.');
-}, '초기화하기');
+};
 
 $('#restaurant-form').onsubmit = event => {
   event.preventDefault();
@@ -267,7 +215,7 @@ $('#restaurant-form').onsubmit = event => {
 $('#spin').onclick = () => {
   ensureToday();
   if (spinning) return;
-  const candidates = eligibleRestaurants(state.restaurants, state.participants);
+  const candidates = eligibleRestaurants(state.restaurants, state.excluded);
   if (!candidates.length) return;
   spinning = true;
   const selectedIndex = randomIndex(candidates.length);
@@ -317,7 +265,7 @@ $('#share').onclick = () => {
   ensureToday();
   const url = new URL(location.href);
   url.hash = `lunch=${encodeShare(state)}`;
-  if (url.href.length > 60000) return toast('공유할 내용이 너무 많아요. 음식점이나 팀원 수를 줄여 주세요.');
+  if (url.href.length > 60000) return toast('공유할 내용이 너무 많아요. 음식점 수를 줄여 주세요.');
   $('#share-url').value = url.href;
   $('#share-dialog').showModal();
 };
@@ -338,7 +286,7 @@ function importShare() {
   try {
     const shared = decodeShare(location.hash.slice(7));
     const oldDay = shared.day !== dayKey();
-    confirm('동료의 점심 리스트가 도착했어요', `음식점 ${shared.restaurants.length}곳과 팀원 ${shared.participants.length}명의 선택으로 이 브라우저의 내용을 교체해요.\n${oldDay ? '지난 날짜의 제외 선택은 비우고 가져와요.' : '오늘의 제외 카테고리도 함께 가져와요.'}\n링크를 만든 뒤의 변경 사항은 자동으로 반영되지 않아요.`, () => {
+    confirm('동료의 점심 리스트가 도착했어요', `음식점 ${shared.restaurants.length}곳과 제외 카테고리 선택으로 이 브라우저의 내용을 교체해요.\n${oldDay ? '지난 날짜의 제외 선택은 비우고 가져와요.' : '오늘의 제외 카테고리도 함께 가져와요.'}\n링크를 만든 뒤의 변경 사항은 자동으로 반영되지 않아요.`, () => {
       state = restore(shared);
       update();
       history.replaceState(null, '', location.pathname + location.search);
@@ -355,7 +303,7 @@ window.addEventListener('storage', event => {
   try { state = restore(JSON.parse(event.newValue)); cancelSpin(); $('#result').hidden = true; render(); } catch { /* Invalid data never replaces the current list. */ }
 });
 window.addEventListener('focus', ensureToday);
-window.addEventListener('resize', () => { if (!spinning) renderWheel(eligibleRestaurants(state.restaurants, state.participants)); });
+window.addEventListener('resize', () => { if (!spinning) renderWheel(eligibleRestaurants(state.restaurants, state.excluded)); });
 setInterval(ensureToday, 30000);
 persist();
 render();

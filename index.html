@@ -24,24 +24,23 @@
 
     <section class="workspace" aria-label="오늘의 점심 선택">
       <div class="preferences panel">
-        <div class="section-heading"><div><span class="step">01</span><h2>오늘은 이거 빼주세요</h2></div><span class="tiny-label">모두의 취향을 모아서</span></div>
-        <p class="section-description">팀원을 추가하고, 오늘 피하고 싶은 카테고리를 골라주세요.</p>
-        <form id="person-form" class="person-form"><label class="sr-only" for="person-name">팀원 이름</label><input id="person-name" name="name" placeholder="이름 또는 닉네임" maxlength="20" required autocomplete="off"><button class="button button-dark" type="submit"><span aria-hidden="true">＋</span> 팀원 추가</button></form>
-        <div id="participants" class="participants"></div>
-        <div class="exclusion-summary"><span class="summary-icon" aria-hidden="true">↳</span><div><strong id="excluded-label">모든 카테고리가 열려 있어요</strong><p id="excluded-description">제외할 메뉴가 없다면 바로 돌려도 좋아요.</p></div><button class="text-button" id="reset-preferences" title="모든 팀원의 오늘 제외 선택 초기화">초기화</button></div>
+        <div class="section-heading"><div><span class="step">01</span><h2>오늘은 이거 빼주세요</h2></div><span class="tiny-label">가볍게 고르고, 바로 돌려요</span></div>
+        <p class="section-description">오늘 피하고 싶은 카테고리를 골라주세요. 선택한 항목은 추첨에서 빠져요.</p>
+        <div id="category-choices" class="category-choices" role="group" aria-label="오늘 제외할 카테고리"></div>
+        <div class="exclusion-summary"><span class="summary-icon" aria-hidden="true">↳</span><div><strong id="excluded-label">모든 카테고리가 열려 있어요</strong><p id="excluded-description">제외할 메뉴가 없다면 바로 돌려도 좋아요.</p></div><button class="text-button" id="reset-preferences" title="오늘 제외 선택 초기화">초기화</button></div>
         <div class="sharing-note"><span aria-hidden="true">↗</span><p>동료와 선택을 나누고 싶다면?<br><button class="text-button" id="share">현재 목록과 오늘 선택 공유하기 <span aria-hidden="true">→</span></button><small>링크를 만든 시점의 내용이 전달돼요. 자동 동기화는 되지 않아요.</small></p></div>
       </div>
 
       <div class="picker panel">
         <div class="picker-top"><span class="step">02</span><span class="picker-eyebrow">LET LUNCH HAPPEN</span><span class="sparkle" aria-hidden="true">✧</span></div>
-        <h2 id="picker-title">오늘의 맛있는 운명은?</h2><p id="candidate-count">3곳의 음식점이 기다리고 있어요</p>
+        <h2 id="picker-title">오늘의 맛있는 운명은?</h2><p id="candidate-count">음식점 목록을 준비하고 있어요</p>
         <div class="wheel-stage"><span class="wheel-decoration decoration-one" aria-hidden="true">✳</span><span class="wheel-decoration decoration-two" aria-hidden="true">✦</span><div class="wheel-pointer" aria-hidden="true"></div><div class="wheel" id="wheel" aria-hidden="true"></div><div class="wheel-hub" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M10 7v9m4-9v9m-8-9v9c0 5 8 5 8 0M10 20v10M25 7c-5 2-5 13 0 13h2V7h-2zm2 13v10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-        <button class="button spin-button" id="spin"><span aria-hidden="true">↻</span> 점심 메뉴 돌리기 <span aria-hidden="true">↗</span></button><p class="picker-footnote" id="picker-footnote">모두의 제외 카테고리를 반영해서 공평하게 뽑아요.</p>
+        <button class="button spin-button" id="spin"><span aria-hidden="true">↻</span> 점심 메뉴 돌리기 <span aria-hidden="true">↗</span></button><p class="picker-footnote" id="picker-footnote">선택한 카테고리를 제외하고 공평하게 뽑아요.</p>
         <div id="result" class="result" role="status" aria-live="polite" hidden></div>
       </div>
     </section>
 
-    <section class="restaurants-section" aria-labelledby="restaurants-title"><div class="restaurant-heading"><div><span class="eyebrow">OUR LUNCH SPOTS</span><h2 id="restaurants-title">우리의 점심 리스트 <span id="restaurant-count">3</span></h2></div><div class="legend"><span></span> 오늘의 후보 <span class="legend-excluded"></span> 오늘은 쉬어가요</div></div><div class="restaurant-grid" id="restaurant-list"></div><div class="list-bottom"><p>익숙한 곳도, 새로운 곳도. 우리 팀의 맛집을 모아보세요.</p><button class="text-button" id="add-restaurant-open">음식점 추가 <span aria-hidden="true">＋</span></button></div></section>
+    <section class="restaurants-section" aria-labelledby="restaurants-title"><div class="restaurant-heading"><div><span class="eyebrow">OUR LUNCH SPOTS</span><h2 id="restaurants-title">우리의 점심 리스트 <span id="restaurant-count"></span></h2></div><div class="legend"><span></span> 오늘의 후보 <span class="legend-excluded"></span> 오늘은 쉬어가요</div></div><div class="restaurant-grid" id="restaurant-list"></div><div class="list-bottom"><p>익숙한 곳도, 새로운 곳도. 우리 팀의 맛집을 모아보세요.</p><button class="text-button" id="add-restaurant-open">음식점 추가 <span aria-hidden="true">＋</span></button></div></section>
   </main>
   <footer class="shell footer"><span class="brand footer-brand"><span class="brand-mark">✳</span> 점심메이트.</span><p>좋은 점심이 좋은 오후를 만드니까.</p><span>MADE FOR OUR TEAM ♡</span></footer>
 
