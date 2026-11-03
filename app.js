@@ -181,31 +181,27 @@ function renderManageList() {
   if (!state.restaurants.length) manage.append(element('div', 'empty-people', '아직 등록된 음식점이 없어요.'));
 }
 
-function renderRestaurantList(candidates) {
+function renderRestaurantList() {
   if (listCategory !== null && !categories().includes(listCategory)) listCategory = null;
   renderCategoryFilters($('#restaurant-filters'), listCategory, 'restaurant-list', category => {
     listCategory = category;
-    renderRestaurantList(eligibleRestaurants(state.restaurants, state.excluded));
+    renderRestaurantList();
   });
-  const eligibleIds = new Set(candidates.map(r => r.id));
   const list = $('#restaurant-list');
   const visible = state.restaurants.filter(r => listCategory === null || r.category === listCategory);
   list.replaceChildren();
   visible.forEach(restaurant => {
-    const eligible = eligibleIds.has(restaurant.id);
-    const row = element('article', `restaurant-item${eligible ? '' : ' excluded'}`);
-    row.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}, ${eligible ? '오늘의 후보' : '오늘 제외'}`);
-    const status = element('span', 'restaurant-status-dot');
-    status.setAttribute('aria-hidden', 'true');
-    row.append(status, element('h3', '', restaurant.name), element('span', 'restaurant-category', restaurant.category));
+    const row = element('article', 'restaurant-item');
+    row.setAttribute('aria-label', `${restaurant.name}, ${restaurant.category}`);
+    row.append(element('h3', '', restaurant.name), element('span', 'restaurant-category', restaurant.category));
     list.append(row);
   });
   if (!state.restaurants.length) list.append(element('div', 'empty-restaurants', '점심 리스트가 비어 있어요. 첫 번째 맛집을 추가해 주세요!'));
   $('#restaurant-count').textContent = listCategory === null ? state.restaurants.length : `${visible.length} / ${state.restaurants.length}`;
 }
 
-function renderRestaurants(candidates) {
-  renderRestaurantList(candidates);
+function renderRestaurants() {
+  renderRestaurantList();
   renderManageList();
   $('#category-options').replaceChildren(...categories().map(category => {
     const option = element('option'); option.value = category; return option;
@@ -218,7 +214,7 @@ function render() {
   $('#today').dateTime = state.day;
   renderCategories();
   renderWheel(candidates);
-  renderRestaurants(candidates);
+  renderRestaurants();
   $('#picker-title').textContent = candidates.length ? '오늘의 맛있는 운명은?' : '잠깐, 먹을 곳이 없어요!';
   $('#candidate-count').textContent = candidates.length ? `${candidates.length}곳의 음식점이 기다리고 있어요` : state.restaurants.length ? '제외한 카테고리를 하나만 풀어볼까요?' : '우리 팀의 첫 번째 음식점을 추가해 주세요.';
   $('#spin').disabled = !candidates.length;
