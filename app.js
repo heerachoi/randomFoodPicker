@@ -23,10 +23,11 @@ import {
   replaceParticipantExcluded,
   subscribeToChanges,
   describeError,
-} from './db.js';
+} from './db.js?v=20261104-20';
 
 const $ = selector => document.querySelector(selector);
-const STORAGE_KEY = 'lunchmate.v4';
+const LOCAL_STORAGE_KEY = 'lunchmate.v4';
+const STORAGE_KEY = isConfigured ? 'lunchmate.shared.v4' : LOCAL_STORAGE_KEY;
 const IDENTITY_KEY = 'lunchmate.identity';
 const COLORS = ['#f4dc9f', '#f4b597', '#d2dfc3', '#e8c8ac', '#d1e3de', '#efd1b7'];
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -209,6 +210,7 @@ function restore(saved) {
 
 try {
   const saved = localStorage.getItem(STORAGE_KEY)
+    || (isConfigured && localStorage.getItem(LOCAL_STORAGE_KEY))
     || localStorage.getItem('lunchmate.v3')
     || localStorage.getItem('lunchmate.v2')
     || localStorage.getItem('lunchmate.v1');

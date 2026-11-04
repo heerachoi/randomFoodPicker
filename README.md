@@ -1,6 +1,6 @@
 # 점심메이트 🍱
 
-오늘 피하고 싶은 카테고리를 선택하고, 남은 음식점 중 한 곳을 공평하게 추첨하는 웹사이트입니다. HTML/CSS/JavaScript만 사용하며, 설치할 라이브러리나 데이터베이스가 없습니다.
+오늘 피하고 싶은 카테고리를 선택하고, 남은 음식점 중 한 곳을 공평하게 추첨하는 웹사이트입니다. HTML/CSS/JavaScript 화면과 Supabase 팀 공용 목록을 사용합니다.
 
 ## 사용하기
 
@@ -17,17 +17,13 @@
 
 ## 저장 방식
 
-이 사이트는 서버/DB가 없는 정적 웹사이트입니다.
+배포된 사이트는 음식점, 카테고리와 오늘의 제외 선택을 Supabase에 저장합니다. 다른 브라우저의 변경 사항은 주기적으로 또는 탭에 돌아올 때 반영됩니다.
 
-- 음식점 추가·삭제와 제외 선택은 **현재 브라우저의 localStorage**에 저장됩니다.
-- 같은 브라우저에서 연 탭끼리는 변경 내용을 동기화합니다.
-- 과거 날짜의 링크는 음식점 목록만 가져오고 제외 선택은 비웁니다.
-- 이전 버전의 저장 내용과 공유 링크도 읽을 수 있습니다. 이전에 사람별로 선택했던 카테고리는 하나로 합치고 이름 정보는 새 저장 내용에 포함하지 않습니다.
-- 모든 직원이 접속 즉시 같은 목록을 보게 하려면 아래 방법으로 GitHub 기본 목록을 수정하세요. 기기 간 실시간 공동 편집에는 별도 DB가 필요합니다.
+Supabase 연결 전 각 브라우저에 저장한 목록은 그 브라우저에 보관됩니다. 공용 목록에 넣을 항목은 검토 후 음식점 관리에서 반영할 수 있습니다.
 
 ## 기본 음식점 변경
 
-저장소의 [`restaurants.js`](./restaurants.js)를 수정하면 GitHub Actions가 재배포합니다.
+공용 목록은 사이트의 음식점 관리에서 수정합니다. Supabase 설정이 없는 로컬 환경의 기본 목록은 [`restaurants.js`](./restaurants.js)에서 관리합니다.
 
 ```js
 export const DEFAULT_RESTAURANTS = [
@@ -45,8 +41,9 @@ export const DEFAULT_RESTAURANTS = [
 
 1. `heerachoi/randomFoodPicker` 공개 저장소의 `main` 브랜치에 소스를 올립니다.
 2. 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 선택합니다.
-3. **Actions → Deploy lunch picker to GitHub Pages → Run workflow**로 최초 배포합니다. 이후 `main`에 수정 내용을 push하면 테스트, 빌드, 배포가 자동 실행됩니다.
-4. 성공한 workflow의 `github-pages` 배포 링크로 접속합니다. 프로젝트 주소는 `https://heerachoi.github.io/randomFoodPicker/`입니다.
+3. **Settings → Secrets and variables → Actions → Variables**에서 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 저장소 변수로 등록합니다. 브라우저용 publishable 키 또는 기존 anon 키를 사용합니다.
+4. **Actions → Deploy lunch picker to GitHub Pages → Run workflow**로 최초 배포합니다. 이후 `main`에 수정 내용을 push하면 테스트, 빌드, 배포가 자동 실행됩니다.
+5. 성공한 workflow의 `github-pages` 배포 링크로 접속합니다. 프로젝트 주소는 `https://heerachoi.github.io/randomFoodPicker/`입니다.
 
 모든 파일 경로는 상대 경로이므로 GitHub Pages 프로젝트 하위 경로에서도 작동합니다. `.github/workflows/deploy.yml`은 `dist/`만 배포하므로 테스트 파일이나 설명 문서는 웹 배포물에 포함되지 않습니다.
 
