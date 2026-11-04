@@ -7,46 +7,115 @@
   <meta name="description" content="우리 팀의 점심 고민을 가볍게. 먹고 싶지 않은 카테고리를 빼고, 모두가 좋아할 점심을 뽑아보세요.">
   <title>점심메이트 — 오늘 점심, 같이 골라요</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=20261103-10">
-  <script type="module" src="app.js?v=20261103-10"></script>
+  <link rel="stylesheet" href="styles.css?v=20261104-16">
+  <script type="module" src="app.js?v=20261104-16"></script>
 </head>
 <body>
   <header class="header shell">
     <a class="brand" href="./" aria-label="점심메이트 홈"><span class="brand-mark">✳</span> 점심메이트<span class="brand-dot">.</span></a>
-    <nav aria-label="주 메뉴"><span class="header-caption">함께 고르면 더 맛있는 점심</span><button class="button button-outline button-small" id="settings-open"><span aria-hidden="true">⚙</span> 음식점 관리</button></nav>
+    <nav aria-label="주 메뉴"><span class="header-caption">함께 고르면 더 맛있는 점심</span><button class="button button-outline button-small" id="settings-open"><span aria-hidden="true">⚙</span> 목록 관리</button></nav>
   </header>
   <main class="shell">
     <section class="intro">
       <div><div class="eyebrow"><span></span> A LITTLE LESS 고민, A LITTLE MORE 점심</div><h1>오늘 점심,<br>고민은 <span class="underline">여기까지.</span></h1><p>먹고 싶지 않은 건 빼고, 맛있는 선택만 남겨요.<br class="mobile-break"> 오늘도 우리 팀, 잘 먹겠습니다!</p></div>
       <div class="intro-note"><span class="note-spark" aria-hidden="true">✷</span><span>매일 찾아오는 고민에<br>가장 가벼운 답!</span><svg viewBox="0 0 100 55" aria-hidden="true"><path d="M8 5c12 45 57 41 70 20M65 25l17-5-1 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
     </section>
-    <div class="today-bar"><div><span class="calendar-icon" aria-hidden="true">▦</span><time id="today"></time><span class="today-pill">TODAY’S LUNCH</span></div><span class="storage-badge"><span></span> 이 브라우저에 저장 중</span></div>
+    <div class="today-bar"><div><span class="calendar-icon" aria-hidden="true">▦</span><time id="today"></time><span class="today-pill">TODAY’S LUNCH</span></div></div>
+    <div class="identity-bar" aria-live="polite">
+      <p class="identity-line">나는 <strong id="my-nickname">…</strong></p>
+      <button type="button" class="text-button" id="reroll-nickname">닉네임 다시 뽑기</button>
+    </div>
 
     <section class="workspace" aria-label="오늘의 점심 선택">
       <div class="preferences panel">
-        <div class="section-heading"><div><span class="step">01</span><h2>오늘은 이거 빼주세요</h2></div><span class="tiny-label">가볍게 고르고, 바로 돌려요</span></div>
+        <div class="section-heading"><div><span class="step">01</span><h2>오늘은 이거 빼주세요</h2></div></div>
         <p class="section-description">오늘 피하고 싶은 카테고리를 골라주세요. 선택한 항목은 추첨에서 빠져요.</p>
         <div id="category-choices" class="category-choices" role="group" aria-label="오늘 제외할 카테고리"></div>
+        <div id="today-votes" class="today-votes" aria-label="오늘의 제외 기록"></div>
       </div>
 
       <div class="picker panel">
         <div class="picker-top"><span class="step">02</span><span class="picker-eyebrow">LET LUNCH HAPPEN</span><span class="sparkle" aria-hidden="true">✧</span></div>
         <h2 id="picker-title">오늘의 맛있는 운명은?</h2><p id="candidate-count">음식점 목록을 준비하고 있어요</p>
         <div class="wheel-stage"><span class="wheel-decoration decoration-one" aria-hidden="true">✳</span><span class="wheel-decoration decoration-two" aria-hidden="true">✦</span><div class="wheel-pointer" aria-hidden="true"></div><div class="wheel" id="wheel" aria-hidden="true"></div><div class="wheel-hub" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M10 7v9m4-9v9m-8-9v9c0 5 8 5 8 0M10 20v10M25 7c-5 2-5 13 0 13h2V7h-2zm2 13v10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div id="result" class="result" role="status" aria-live="polite"></div>
         <button class="button spin-button" id="spin"><span aria-hidden="true">↻</span> 점심 메뉴 돌리기 <span aria-hidden="true">↗</span></button>
-        <div id="result" class="result" role="status" aria-live="polite" hidden></div>
       </div>
     </section>
 
     <section class="restaurants-section" aria-labelledby="restaurants-title">
-      <div class="restaurant-heading"><h2 id="restaurants-title">우리의 점심 리스트 <span id="restaurant-count"></span></h2><button class="text-button" id="add-restaurant-open">음식점 추가 <span aria-hidden="true">＋</span></button></div>
+      <div class="restaurant-heading"><h2 id="restaurants-title">우리의 점심 리스트 <span id="restaurant-count"></span></h2><button class="text-button" id="add-restaurant-open">관리</button></div>
       <div id="restaurant-filters" class="restaurant-filters" role="group" aria-label="점심 리스트 카테고리 필터"></div>
       <div class="restaurant-list" id="restaurant-list"></div>
     </section>
   </main>
   <footer class="shell footer"><span class="brand footer-brand"><span class="brand-mark">✳</span> 점심메이트.</span><p>좋은 점심이 좋은 오후를 만드니까.</p><span>MADE FOR OUR TEAM ♡</span></footer>
 
-  <dialog id="settings-dialog" class="modal"><div class="modal-heading"><div><span class="eyebrow">OUR LUNCH SPOTS</span><h2>음식점 관리</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="음식점 관리 닫기">×</button></div><div id="manage-filters" class="manage-filters" role="group" aria-label="음식점 목록 필터"></div><div id="manage-list" class="manage-list"></div><form id="restaurant-form" class="restaurant-form"><h3>새로운 맛집 추가</h3><label for="restaurant-name">음식점 이름</label><input id="restaurant-name" maxlength="40" placeholder="예: 맛있는 식당" required><label for="restaurant-category">음식 카테고리</label><input id="restaurant-category" list="category-options" maxlength="20" placeholder="예: 한식, 일식, 쌀국수" required><datalist id="category-options"></datalist><button class="button button-orange" type="submit">＋ 음식점 추가하기</button></form></dialog>
+  <dialog id="settings-dialog" class="modal settings-modal">
+    <div class="modal-heading">
+      <div><span class="eyebrow">OUR LUNCH SPOTS</span><h2 id="settings-title">목록 관리</h2></div>
+      <button class="icon-button" data-close="settings-dialog" aria-label="목록 관리 닫기">×</button>
+    </div>
+    <div class="manage-tabs" role="tablist" aria-label="관리 메뉴">
+      <button type="button" class="manage-tab" role="tab" id="tab-restaurants" aria-controls="panel-restaurants" aria-selected="true" data-manage-tab="restaurants">음식점 관리</button>
+      <button type="button" class="manage-tab" role="tab" id="tab-categories" aria-controls="panel-categories" aria-selected="false" data-manage-tab="categories">카테고리 관리</button>
+    </div>
+    <section class="manage-panel" role="tabpanel" id="panel-restaurants" aria-labelledby="tab-restaurants">
+      <div id="manage-filters" class="manage-filters" role="group" aria-label="음식점 목록 필터"></div>
+      <div id="manage-list" class="manage-list"></div>
+      <form id="restaurant-form" class="restaurant-form">
+        <h3>새로운 맛집 추가</h3>
+        <label for="restaurant-name">음식점 이름</label>
+        <div class="field">
+          <input id="restaurant-name" maxlength="40" placeholder="예: 맛있는 식당" required aria-describedby="restaurant-name-error">
+          <p class="field-error" id="restaurant-name-error" role="alert" hidden></p>
+        </div>
+        <span class="field-label" id="restaurant-category-label">카테고리 <small>여러 개 선택 가능</small></span>
+        <div id="restaurant-category-picker" class="category-picker" role="group" aria-labelledby="restaurant-category-label"></div>
+        <button class="button button-orange" type="submit">＋ 음식점 추가하기</button>
+      </form>
+    </section>
+    <section class="manage-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories" hidden>
+      <div id="category-manage-list" class="manage-list category-manage-list"></div>
+      <form id="category-form" class="restaurant-form category-form">
+        <h3>새 카테고리 추가</h3>
+        <label for="category-name">카테고리 이름</label>
+        <div class="field">
+          <div class="inline-form">
+            <input id="category-name" maxlength="20" placeholder="예: 분식" required aria-describedby="category-name-error">
+            <button class="button button-orange" type="submit">추가</button>
+          </div>
+          <p class="field-error" id="category-name-error" role="alert" hidden></p>
+        </div>
+      </form>
+    </section>
+  </dialog>
+  <dialog id="edit-restaurant-dialog" class="modal">
+    <div class="modal-heading">
+      <div><span class="eyebrow">EDIT SPOT</span><h2 id="edit-restaurant-title">카테고리 수정</h2></div>
+      <button class="icon-button" data-close="edit-restaurant-dialog" aria-label="카테고리 수정 닫기">×</button>
+    </div>
+    <form id="edit-restaurant-form" class="restaurant-form">
+      <p id="edit-restaurant-name" class="edit-restaurant-name"></p>
+      <span class="field-label" id="edit-restaurant-category-label">카테고리 <small>여러 개 선택 가능</small></span>
+      <div id="edit-restaurant-category-picker" class="category-picker" role="group" aria-labelledby="edit-restaurant-category-label"></div>
+      <div class="edit-category-create">
+        <label for="edit-category-name">새 카테고리</label>
+        <div class="field">
+          <div class="inline-form">
+            <input id="edit-category-name" maxlength="20" placeholder="예: 분식" form="edit-category-form" aria-describedby="edit-category-name-error">
+            <button class="button button-outline" type="submit" form="edit-category-form">추가</button>
+          </div>
+          <p class="field-error" id="edit-category-name-error" role="alert" hidden></p>
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button class="button button-outline" type="button" data-close="edit-restaurant-dialog">취소</button>
+        <button class="button button-orange" type="submit">저장하기</button>
+      </div>
+    </form>
+    <form id="edit-category-form" hidden></form>
+  </dialog>
   <dialog id="confirm-dialog" class="modal confirm-modal"><div class="modal-heading"><h2 id="confirm-title">확인</h2><button class="icon-button" data-close="confirm-dialog" aria-label="닫기">×</button></div><p id="confirm-description"></p><div class="confirm-actions"><button class="button button-outline" data-close="confirm-dialog">취소</button><button class="button button-orange" id="confirm-action">확인</button></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>

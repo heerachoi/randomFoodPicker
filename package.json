@@ -4,8 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "config": "node scripts/write-supabase-config.mjs",
+    "dev": "npm run config && python3 -m http.server 4173 --bind 127.0.0.1",
     "test": "node --test",
-    "build": "node scripts/build.mjs"
+    "build": "npm run config && node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0"
   }
 }
