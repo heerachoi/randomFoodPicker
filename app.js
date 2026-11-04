@@ -52,10 +52,32 @@ function setManageTab(tab) {
   $('#settings-title').textContent = isRestaurants ? '음식점 관리' : '카테고리 관리';
 }
 
+let dialogScrollY = 0;
+
+function syncDialogScrollLock() {
+  const open = document.querySelector('dialog[open]');
+  if (open) {
+    if (!document.documentElement.classList.contains('dialog-open')) {
+      dialogScrollY = window.scrollY;
+      document.documentElement.classList.add('dialog-open');
+      document.body.style.top = `-${dialogScrollY}px`;
+    }
+    return;
+  }
+  if (!document.documentElement.classList.contains('dialog-open')) return;
+  document.documentElement.classList.remove('dialog-open');
+  document.body.style.top = '';
+  window.scrollTo(0, dialogScrollY);
+}
+
 function openSettings(tab = 'restaurants', focusSelector) {
   setManageTab(tab);
   $('#settings-dialog').showModal();
-  if (focusSelector) $(focusSelector)?.focus();
+  syncDialogScrollLock();
+  // Avoid focusing inputs on touch devices — keyboard jump scrolls the page behind the modal.
+  if (focusSelector && !window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    $(focusSelector)?.focus();
+  }
 }
 
 function freshState() {
@@ -311,6 +333,7 @@ function confirm(title, description, action, label = '확인') {
   $('#confirm-action').textContent = label;
   confirmAction = action;
   $('#confirm-dialog').showModal();
+  syncDialogScrollLock();
 }
 
 async function withSync(action) {
@@ -613,6 +636,7 @@ function openEditRestaurant(restaurant) {
   clearFieldError('#edit-category-name');
   renderEditCategoryPicker(restaurantCategories(restaurant));
   $('#edit-restaurant-dialog').showModal();
+  syncDialogScrollLock();
 }
 
 function renderManageList() {
@@ -840,6 +864,8 @@ document.querySelectorAll('dialog').forEach(dialog => {
     const rect = dialog.getBoundingClientRect();
     if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
   });
+  dialog.addEventListener('close', syncDialogScrollLock);
+  dialog.addEventListener('cancel', () => queueMicrotask(syncDialogScrollLock));
 });
 $('#confirm-action').onclick = () => { $('#confirm-dialog').close(); const action = confirmAction; confirmAction = undefined; action?.(); };
 
@@ -880,7 +906,7 @@ importShare();
 if (isConfigured) {
   refreshFromRemote()
     .then(async () => {
-      toast(`팀 점심 목록에 연결했어요. 음식점 ${state.restaurants.length}곳`);
+      toast(`환영합니다, ${identity.nickname}!`);
       try { await syncParticipant(); } catch { /* toast already shown */ }
       subscribeToChanges(() => {
         if (syncing || spinning) return;
