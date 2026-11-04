@@ -57,8 +57,9 @@ test('legacy single category field still works for eligibility', () => {
 });
 
 test('daily selections use the Korean calendar date and clear only exclusions', () => {
-  assert.equal(dayKey(new Date('2026-11-02T14:59:59Z')), '2026-11-02');
-  assert.equal(dayKey(new Date('2026-11-02T15:00:00Z')), '2026-11-03');
+  // Seoul day rolls over at 23:59 (UTC+9) → 14:59Z
+  assert.equal(dayKey(new Date('2026-11-02T14:58:59Z')), '2026-11-02');
+  assert.equal(dayKey(new Date('2026-11-02T14:59:00Z')), '2026-11-03');
   const restored = restoreState(state(), restaurants, '2026-11-04');
   assert.deepEqual(restored.participants[0].excluded, []);
   assert.deepEqual(restored.restaurants, restaurants);

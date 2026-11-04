@@ -1,5 +1,7 @@
+/** Lunch-day key in Asia/Seoul; rolls over at 23:59 so exclusions reset from that minute. */
 export function dayKey(date = new Date()) {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  const shifted = new Date(date.getTime() + 60_000);
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
 }
 
 export const NICKNAME_ADJECTIVES = [

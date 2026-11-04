@@ -33,11 +33,13 @@ const COLORS = ['#f4dc9f', '#f4b597', '#d2dfc3', '#e8c8ac', '#d1e3de', '#efd1b7'
 const clone = value => JSON.parse(JSON.stringify(value));
 const id = () => crypto.randomUUID();
 let state = freshState();
-let identity = readStoredIdentity() || createIdentity();
+let identity = readStoredIdentity();
 let spinTimer, toastTimer, rotation = 0, spinning = false, confirmAction;
 let manageCategory = null;
 let listCategory = null;
 let syncing = false;
+let exclusionDirty = false;
+let savedExcludedKey = '';
 let suppressPersist = false;
 let remoteReady = false;
 let editingRestaurantId = null;
@@ -108,15 +110,10 @@ function persistIdentity(next = identity) {
   try {
     localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
   } catch { /* Ignore quota / private-mode write failures. */ }
+  return identity;
 }
 
-function createIdentity() {
-  const created = { id: id(), nickname: makeNickname() };
-  try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify(created));
-  } catch { /* Ignore quota / private-mode write failures. */ }
-  return created;
-}
+if (!identity) persistIdentity({ id: id(), nickname: makeNickname() });
 
 function takenNicknames(exceptId = identity.id) {
   return state.participants
@@ -143,6 +140,28 @@ function myExcluded() {
 
 function setMyExcluded(excluded) {
   ensureSelfParticipant().excluded = [...new Set(excluded)];
+}
+
+function excludedKey(list) {
+  return [...new Set(list || [])].slice().sort((a, b) => a.localeCompare(b, 'ko')).join('\0');
+}
+
+function markExclusionsSaved() {
+  savedExcludedKey = excludedKey(myExcluded());
+  exclusionDirty = false;
+  syncSaveExclusionsButton();
+}
+
+function noteExclusionEdit() {
+  exclusionDirty = excludedKey(myExcluded()) !== savedExcludedKey;
+  syncSaveExclusionsButton();
+}
+
+function syncSaveExclusionsButton() {
+  const button = $('#save-exclusions');
+  if (!button) return;
+  button.disabled = !exclusionDirty || syncing;
+  button.textContent = syncing && exclusionDirty ? '저장 중…' : '선택 저장하기';
 }
 
 function teamExcluded() {
@@ -228,13 +247,6 @@ ensureSelfParticipant();
   }
 }
 
-function setBadge(text, online = true) {
-  const badge = $('.storage-badge');
-  if (!badge) return;
-  badge.lastChild.textContent = ` ${text}`;
-  badge.firstElementChild.style.background = online ? '#8ba47e' : '#c4a15c';
-}
-
 function persist() {
   if (suppressPersist) return;
   try {
@@ -242,9 +254,6 @@ function persist() {
   } catch {
     /* Ignore quota / private-mode write failures. */
   }
-  if (isConfigured && remoteReady) setBadge(syncing ? '팀 목록 동기화 중…' : '팀 공유 저장 중', true);
-  else if (isConfigured) setBadge('팀 목록 연결 중…', true);
-  else setBadge('이 브라우저에 저장 중 · Supabase 미연결', false);
 }
 
 function cancelSpin() {
@@ -324,8 +333,13 @@ function ensureToday() {
     .filter(person => person.id === identity.id)
     .map(person => ({ ...person, excluded: [] }));
   ensureSelfParticipant();
+  markExclusionsSaved();
   update();
-  if (isConfigured && remoteReady) syncParticipant();
+  if (isConfigured && remoteReady) {
+    syncParticipant()
+      .then(() => markExclusionsSaved())
+      .catch(() => { /* toast already shown */ });
+  }
   toast('새로운 날이에요! 오늘의 제외 선택을 초기화했어요.');
 }
 
@@ -341,6 +355,7 @@ function confirm(title, description, action, label = '확인') {
 async function withSync(action) {
   if (!isConfigured || !remoteReady) return action();
   syncing = true;
+  syncSaveExclusionsButton();
   persist();
   try {
     return await action();
@@ -350,6 +365,7 @@ async function withSync(action) {
     throw error;
   } finally {
     syncing = false;
+    syncSaveExclusionsButton();
     persist();
   }
 }
@@ -372,10 +388,22 @@ async function syncParticipant() {
   });
 }
 
+function keepDraftExclusions(draftExcluded, savedKey) {
+  if (!draftExcluded) {
+    markExclusionsSaved();
+    return;
+  }
+  savedExcludedKey = savedKey;
+  setMyExcluded(draftExcluded);
+  exclusionDirty = excludedKey(draftExcluded) !== savedExcludedKey;
+  syncSaveExclusionsButton();
+}
+
 async function refreshFromRemote() {
   if (!isConfigured) return;
   const remote = await fetchState(dayKey());
   const mine = state.participants.find(person => person.id === identity.id);
+  const draftExcluded = exclusionDirty ? [...(mine?.excluded || [])] : null;
   suppressPersist = true;
   state = {
     version: 4,
@@ -387,16 +415,19 @@ async function refreshFromRemote() {
   const remoteSelf = state.participants.find(person => person.id === identity.id);
   if (remoteSelf) {
     if (remoteSelf.nickname !== identity.nickname) persistIdentity({ ...identity, nickname: remoteSelf.nickname });
+    keepDraftExclusions(draftExcluded, excludedKey(remoteSelf.excluded));
   } else if (mine) {
     state.participants = [...state.participants, {
       id: identity.id,
       nickname: uniqueNickname(identity.nickname, takenNicknames()),
-      excluded: mine.excluded,
+      excluded: draftExcluded || mine.excluded,
     }];
     const self = state.participants.find(person => person.id === identity.id);
     if (self.nickname !== identity.nickname) persistIdentity({ ...identity, nickname: self.nickname });
+    keepDraftExclusions(draftExcluded, '');
   } else {
     ensureSelfParticipant();
+    keepDraftExclusions(draftExcluded, excludedKey(myExcluded()));
   }
   remoteReady = true;
   suppressPersist = false;
@@ -411,8 +442,8 @@ function renderIdentity() {
 }
 
 function revealNickname() {
+  renderIdentity();
   const el = $('#my-nickname');
-  el.textContent = identity.nickname;
   el.classList.remove('nickname-appear');
   void el.offsetWidth;
   el.classList.add('nickname-appear');
@@ -455,15 +486,15 @@ function renderCategories() {
     const emoji = element('span', 'category-emoji', foodEmoji(category));
     emoji.setAttribute('aria-hidden', 'true');
     button.append(emoji, element('span', 'category-name', category), element('span', 'category-count', `${count}곳`), element('span', 'chip-indicator', selected ? '✓' : ''));
-    button.onclick = async () => {
+    button.onclick = () => {
       ensureToday();
       const current = myExcluded();
       setMyExcluded(current.includes(category)
         ? current.filter(item => item !== category)
         : [...current, category]);
+      noteExclusionEdit();
       update();
       [...container.querySelectorAll('button')].find(el => el.getAttribute('aria-label') === `${category} 제외`)?.focus({ preventScroll: true });
-      try { await syncParticipant(); } catch { /* toast already shown */ }
     };
     container.append(button);
   });
@@ -519,20 +550,16 @@ function restaurantsUsingCategory(categoryName) {
   return state.restaurants.filter(restaurant => restaurantCategories(restaurant).includes(categoryName));
 }
 
-async function addCategoryByName(name, { autoSelectForEdit = false } = {}) {
+async function addCategoryByName(name, { autoSelectForEdit = false, errorTarget } = {}) {
   const trimmed = name.trim();
-  if (!trimmed) {
-    toast('카테고리 이름을 입력해 주세요.');
+  const fail = message => {
+    if (errorTarget) showFieldError(errorTarget, message);
+    else toast(message);
     return null;
-  }
-  if (state.categories.length >= 100) {
-    toast('카테고리는 최대 100개까지 추가할 수 있어요.');
-    return null;
-  }
-  if (state.categories.some(category => category.name === trimmed)) {
-    toast('이미 존재합니다');
-    return null;
-  }
+  };
+  if (!trimmed) return fail('카테고리 이름을 입력해 주세요.');
+  if (state.categories.length >= 100) return fail('카테고리는 최대 100개까지 추가할 수 있어요.');
+  if (state.categories.some(category => category.name === trimmed)) return fail('이미 존재합니다');
   let category = { id: id(), name: trimmed };
   if (isConfigured && remoteReady) {
     category = await withSync(() => createCategory(trimmed));
@@ -723,6 +750,7 @@ function render() {
   renderTodayVotes();
   renderWheel(candidates);
   renderRestaurants();
+  syncSaveExclusionsButton();
   $('#picker-title').textContent = candidates.length ? '오늘의 맛있는 운명은?' : '잠깐, 먹을 곳이 없어요!';
   $('#candidate-count').textContent = candidates.length ? `${candidates.length}곳의 음식점이 기다리고 있어요` : state.restaurants.length ? '제외한 카테고리를 하나만 풀어볼까요?' : '우리 팀의 첫 번째 음식점을 추가해 주세요.';
   if (!spinning) {
@@ -738,6 +766,17 @@ function render() {
 $('#category-name').addEventListener('input', () => clearFieldError('#category-name'));
 $('#edit-category-name').addEventListener('input', () => clearFieldError('#edit-category-name'));
 $('#restaurant-name').addEventListener('input', () => clearFieldError('#restaurant-name'));
+
+$('#save-exclusions').onclick = async () => {
+  if (!exclusionDirty || syncing) return;
+  ensureToday();
+  try {
+    await syncParticipant();
+    markExclusionsSaved();
+    toast(myExcluded().length ? '오늘의 제외 선택을 저장했어요.' : '제외 선택을 비웠어요.');
+    renderTodayVotes();
+  } catch { /* toast already shown */ }
+};
 
 $('#category-form').onsubmit = async event => {
   event.preventDefault();
@@ -826,6 +865,7 @@ $('#reroll-nickname').onclick = async () => {
   revealNickname();
   try {
     await syncParticipant();
+    markExclusionsSaved();
     toast(`오늘은 ${nickname}!`);
   } catch { /* toast already shown */ }
 };
@@ -900,16 +940,36 @@ window.addEventListener('storage', event => {
 });
 window.addEventListener('focus', ensureToday);
 window.addEventListener('resize', () => { if (!spinning) renderWheel(eligibleRestaurants(state.restaurants, teamExcluded())); });
+
+const backToTop = $('#back-to-top');
+const syncBackToTop = () => {
+  const show = window.scrollY > 320;
+  backToTop.hidden = false;
+  backToTop.classList.toggle('is-visible', show);
+  backToTop.setAttribute('aria-hidden', show ? 'false' : 'true');
+  backToTop.tabIndex = show ? 0 : -1;
+};
+backToTop.addEventListener('click', () => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+});
+window.addEventListener('scroll', syncBackToTop, { passive: true });
+syncBackToTop();
+
 setInterval(ensureToday, 30000);
 persist();
 render();
+markExclusionsSaved();
 importShare();
 
 if (isConfigured) {
   refreshFromRemote()
     .then(async () => {
       toast(`환영합니다, ${identity.nickname}!`);
-      try { await syncParticipant(); } catch { /* toast already shown */ }
+      try {
+        await syncParticipant();
+        markExclusionsSaved();
+      } catch { /* toast already shown */ }
       subscribeToChanges(() => {
         if (syncing || spinning) return;
         refreshFromRemote().catch(() => {});
@@ -917,7 +977,6 @@ if (isConfigured) {
     })
     .catch(error => {
       remoteReady = false;
-      setBadge('팀 목록 연결 실패 · 로컬 저장', false);
       console.error(error);
       toast(describeError(error));
     });
