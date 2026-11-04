@@ -7,8 +7,8 @@
   <meta name="description" content="우리 팀의 점심 고민을 가볍게. 먹고 싶지 않은 카테고리를 빼고, 모두가 좋아할 점심을 뽑아보세요.">
   <title>점심메이트 — 오늘 점심, 같이 골라요</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=20261104-25">
-  <script type="module" src="app.js?v=20261104-24"></script>
+  <link rel="stylesheet" href="styles.css?v=20261104-27">
+  <script type="module" src="app.js?v=20261104-26"></script>
 </head>
 <body>
   <header class="header shell">
@@ -55,7 +55,13 @@
   <dialog id="settings-dialog" class="modal settings-modal">
     <div class="modal-chrome">
       <div class="modal-heading">
-        <div><span class="eyebrow">OUR LUNCH SPOTS</span><h2 id="settings-title">목록 관리</h2></div>
+        <div>
+          <span class="eyebrow">OUR LUNCH SPOTS</span>
+          <div class="settings-title-row">
+            <h2 id="settings-title">음식점 관리</h2>
+            <button type="button" class="title-add-button" id="add-restaurant-plus" aria-label="새 맛집 추가">+</button>
+          </div>
+        </div>
         <button class="icon-button" data-close="settings-dialog" aria-label="목록 관리 닫기">×</button>
       </div>
       <div class="manage-tabs" role="tablist" aria-label="관리 메뉴">
@@ -67,17 +73,6 @@
       <section class="manage-panel" role="tabpanel" id="panel-restaurants" aria-labelledby="tab-restaurants">
         <div id="manage-filters" class="manage-filters" role="group" aria-label="음식점 목록 필터"></div>
         <div id="manage-list" class="manage-list"></div>
-        <form id="restaurant-form" class="restaurant-form">
-          <h3>새로운 맛집 추가</h3>
-          <label for="restaurant-name">음식점 이름</label>
-          <div class="field">
-            <input id="restaurant-name" maxlength="40" placeholder="예: 맛있는 식당" required aria-describedby="restaurant-name-error">
-            <p class="field-error" id="restaurant-name-error" role="alert" hidden></p>
-          </div>
-          <span class="field-label" id="restaurant-category-label">카테고리 <small>여러 개 선택 가능</small></span>
-          <div id="restaurant-category-picker" class="category-picker" role="group" aria-labelledby="restaurant-category-label"></div>
-          <button class="button button-orange" type="submit">＋ 음식점 추가하기</button>
-        </form>
       </section>
       <section class="manage-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories" hidden>
         <div id="category-manage-list" class="manage-list category-manage-list"></div>
@@ -93,6 +88,40 @@
           </div>
         </form>
       </section>
+    </div>
+  </dialog>
+  <dialog id="add-restaurant-dialog" class="modal">
+    <div class="modal-chrome">
+      <div class="modal-heading">
+        <div><span class="eyebrow">NEW SPOT</span><h2>새로운 맛집 추가</h2></div>
+        <button class="icon-button" data-close="add-restaurant-dialog" aria-label="맛집 추가 닫기">×</button>
+      </div>
+    </div>
+    <div class="modal-scroll">
+      <form id="restaurant-form" class="restaurant-form add-restaurant-form">
+        <label for="restaurant-name">음식점 이름</label>
+        <div class="field">
+          <input id="restaurant-name" maxlength="40" placeholder="예: 맛있는 식당" required aria-describedby="restaurant-name-error">
+          <p class="field-error" id="restaurant-name-error" role="alert" hidden></p>
+        </div>
+        <span class="field-label" id="restaurant-category-label">카테고리 <small>여러 개 선택 가능</small></span>
+        <div id="restaurant-category-picker" class="category-picker" role="group" aria-labelledby="restaurant-category-label"></div>
+        <div class="edit-category-create">
+          <label for="add-category-name">새 카테고리</label>
+          <div class="field">
+            <div class="inline-form">
+              <input id="add-category-name" maxlength="20" placeholder="예: 분식" form="add-category-form" aria-describedby="add-category-name-error">
+              <button class="button button-outline" type="submit" form="add-category-form">추가</button>
+            </div>
+            <p class="field-error" id="add-category-name-error" role="alert" hidden></p>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button class="button button-outline" type="button" data-close="add-restaurant-dialog">취소</button>
+          <button class="button button-orange" type="submit">추가하기</button>
+        </div>
+      </form>
+      <form id="add-category-form" hidden></form>
     </div>
   </dialog>
   <dialog id="edit-restaurant-dialog" class="modal">

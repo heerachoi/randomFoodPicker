@@ -53,6 +53,7 @@ function setManageTab(tab) {
   $('#panel-restaurants').hidden = !isRestaurants;
   $('#panel-categories').hidden = isRestaurants;
   $('#settings-title').textContent = isRestaurants ? '음식점 관리' : '카테고리 관리';
+  $('#add-restaurant-plus').hidden = !isRestaurants;
 }
 
 let dialogScrollY = 0;
@@ -73,13 +74,24 @@ function syncDialogScrollLock() {
   window.scrollTo(0, dialogScrollY);
 }
 
-function openSettings(tab = 'restaurants', focusSelector) {
+function openSettings(tab = 'restaurants', { openAdd = false } = {}) {
   setManageTab(tab);
   $('#settings-dialog').showModal();
   syncDialogScrollLock();
+  if (openAdd) openAddRestaurant();
+}
+
+function openAddRestaurant() {
+  $('#restaurant-form').reset();
+  $('#add-category-name').value = '';
+  clearFieldError('#restaurant-name');
+  clearFieldError('#add-category-name');
+  renderCategoryPicker();
+  $('#add-restaurant-dialog').showModal();
+  syncDialogScrollLock();
   // Avoid focusing inputs on touch devices — keyboard jump scrolls the page behind the modal.
-  if (focusSelector && !window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
-    $(focusSelector)?.focus();
+  if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    $('#restaurant-name')?.focus();
   }
 }
 
@@ -550,7 +562,7 @@ function restaurantsUsingCategory(categoryName) {
   return state.restaurants.filter(restaurant => restaurantCategories(restaurant).includes(categoryName));
 }
 
-async function addCategoryByName(name, { autoSelectForEdit = false, errorTarget } = {}) {
+async function addCategoryByName(name, { selectInPicker, errorTarget } = {}) {
   const trimmed = name.trim();
   const fail = message => {
     if (errorTarget) showFieldError(errorTarget, message);
@@ -560,17 +572,18 @@ async function addCategoryByName(name, { autoSelectForEdit = false, errorTarget 
   if (!trimmed) return fail('카테고리 이름을 입력해 주세요.');
   if (state.categories.length >= 100) return fail('카테고리는 최대 100개까지 추가할 수 있어요.');
   if (state.categories.some(category => category.name === trimmed)) return fail('이미 존재합니다');
+  const selected = selectInPicker
+    ? new Set(selectedCategoriesFrom(selectInPicker).categoryNames)
+    : null;
   let category = { id: id(), name: trimmed };
   if (isConfigured && remoteReady) {
     category = await withSync(() => createCategory(trimmed));
   }
   state.categories = [...state.categories, category].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  if (selected) selected.add(category.name);
   update();
-  if (autoSelectForEdit && $('#edit-restaurant-dialog').open) {
-    const selected = new Set(selectedCategoriesFrom('#edit-restaurant-category-picker').categoryNames);
-    selected.add(category.name);
-    renderEditCategoryPicker([...selected]);
-  }
+  if (selectInPicker === '#edit-restaurant-category-picker') renderEditCategoryPicker([...(selected || [])]);
+  else if (selectInPicker === '#restaurant-category-picker') renderCategoryPicker([...(selected || [])]);
   toast(`${trimmed} 카테고리를 추가했어요.`);
   return category;
 }
@@ -764,6 +777,7 @@ function render() {
 }
 
 $('#category-name').addEventListener('input', () => clearFieldError('#category-name'));
+$('#add-category-name').addEventListener('input', () => clearFieldError('#add-category-name'));
 $('#edit-category-name').addEventListener('input', () => clearFieldError('#edit-category-name'));
 $('#restaurant-name').addEventListener('input', () => clearFieldError('#restaurant-name'));
 
@@ -789,11 +803,25 @@ $('#category-form').onsubmit = async event => {
   } catch { /* toast already shown */ }
 };
 
+$('#add-category-form').onsubmit = async event => {
+  event.preventDefault();
+  try {
+    const created = await addCategoryByName($('#add-category-name').value, {
+      selectInPicker: '#restaurant-category-picker',
+      errorTarget: '#add-category-name',
+    });
+    if (!created) return;
+    $('#add-category-name').value = '';
+    clearFieldError('#add-category-name');
+    $('#add-category-name').focus();
+  } catch { /* toast already shown */ }
+};
+
 $('#edit-category-form').onsubmit = async event => {
   event.preventDefault();
   try {
     const created = await addCategoryByName($('#edit-category-name').value, {
-      autoSelectForEdit: true,
+      selectInPicker: '#edit-restaurant-category-picker',
       errorTarget: '#edit-category-name',
     });
     if (!created) return;
@@ -826,10 +854,9 @@ $('#restaurant-form').onsubmit = async event => {
     manageCategory = categoryNames[0];
     $('#restaurant-form').reset();
     clearFieldError('#restaurant-name');
-    renderCategoryPicker();
+    $('#add-restaurant-dialog').close();
     update();
     toast(`${name}, 점심 리스트에 추가했어요!`);
-    $('#restaurant-name').focus();
   } catch { /* toast already shown */ }
 };
 
@@ -899,7 +926,8 @@ document.querySelectorAll('[data-manage-tab]').forEach(button => {
   button.onclick = () => setManageTab(button.dataset.manageTab);
 });
 $('#settings-open').onclick = () => openSettings(manageTab);
-$('#add-restaurant-open').onclick = () => openSettings('restaurants', '#restaurant-name');
+$('#add-restaurant-open').onclick = () => openSettings('restaurants');
+$('#add-restaurant-plus').onclick = () => openAddRestaurant();
 document.querySelectorAll('[data-close]').forEach(button => { button.onclick = () => $(`#${button.dataset.close}`).close(); });
 document.querySelectorAll('dialog').forEach(dialog => {
   dialog.addEventListener('click', event => {
